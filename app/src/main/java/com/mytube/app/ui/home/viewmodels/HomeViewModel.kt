@@ -3,39 +3,47 @@ package com.mytube.app.ui.home.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mytube.app.data.MediaRepository
-import com.mytube.app.models.MediaItem
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import javax.inject.Inject
 
-class HomeViewModel : ViewModel() {
-    private val mediaRepository = MediaRepository()
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val mediaRepository: MediaRepository
+) : ViewModel() {
 
-    private val _mediaItems = MutableStateFlow<List<MediaItem>>(emptyList())
-    val mediaItems: StateFlow<List<MediaItem>> = _mediaItems.asStateFlow()
+    private val _mediaItems = MutableStateFlow<List<String>>(emptyList())
+    val mediaItems = _mediaItems.asStateFlow()
 
     init {
-        loadInitialMedia()
+        loadDummyMediaItems()
     }
 
-    private fun loadInitialMedia() {
+    private fun loadDummyMediaItems() {
         viewModelScope.launch {
-            Timber.d("HomeViewModel: Loading initial media")
-            mediaRepository.getMediaItems().collect { items ->
-                Timber.i("HomeViewModel: Loaded ${items.size} initial media items")
-                _mediaItems.value = items
+            try {
+                mediaRepository.getDummyMediaItems().collect { items ->
+                    _mediaItems.value = items
+                    Timber.d("HomeViewModel: Loaded ${items.size} dummy media items")
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "HomeViewModel: Error loading dummy media items")
             }
         }
     }
 
     fun searchMedia(query: String) {
         viewModelScope.launch {
-            Timber.d("HomeViewModel: Searching media with query: $query")
-            mediaRepository.searchMediaItems(query).collect { filteredItems ->
-                Timber.i("HomeViewModel: Found ${filteredItems.size} items matching query")
-                _mediaItems.value = filteredItems
+            try {
+                mediaRepository.searchMedia(query).collect { filteredItems ->
+                    _mediaItems.value = filteredItems
+                    Timber.d("HomeViewModel: Search returned ${filteredItems.size} items for query '$query'")
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "HomeViewModel: Error during media search")
             }
         }
     }

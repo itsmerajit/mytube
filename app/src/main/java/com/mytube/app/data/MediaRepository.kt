@@ -1,32 +1,47 @@
 package com.mytube.app.data
 
-import com.mytube.app.models.MediaItem
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.components.ViewModelComponent
+import dagger.hilt.android.scopes.ViewModelScoped
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import timber.log.Timber
+import javax.inject.Inject
 
-class MediaRepository {
-    fun getMediaItems(): Flow<List<MediaItem>> = flow {
-        Timber.d("MediaRepository: Fetching media items")
-        try {
-            // Simulating network or database fetch
-            val dummyItems = MediaItem.createDummyItems()
-            Timber.i("MediaRepository: Loaded ${dummyItems.size} media items")
-            emit(dummyItems)
-        } catch (e: Exception) {
-            Timber.e(e, "Error fetching media items")
-            emit(emptyList())
-        }
+@ViewModelScoped
+class MediaRepository @Inject constructor() {
+
+    private val _dummyItems = MutableStateFlow(listOf(
+        "Funny Cat Video", 
+        "Travel Vlog", 
+        "Cooking Tutorial", 
+        "Music Performance", 
+        "Tech Review", 
+        "Gaming Highlight"
+    ))
+    val dummyItems = _dummyItems.asStateFlow()
+
+    fun getDummyMediaItems(): Flow<List<String>> = flow {
+        val items = _dummyItems.value
+        Timber.d("Dummy Media Repository: Emitting ${items.size} items")
+        emit(items)
     }
 
-    fun searchMediaItems(query: String): Flow<List<MediaItem>> = flow {
-        Timber.d("MediaRepository: Searching media items with query: $query")
-        val allItems = MediaItem.createDummyItems()
-        val filteredItems = allItems.filter { 
-            it.title.contains(query, ignoreCase = true) || 
-            it.description?.contains(query, ignoreCase = true) == true
-        }
-        Timber.i("MediaRepository: Found ${filteredItems.size} items matching query")
-        emit(filteredItems)
+    fun searchMedia(query: String): Flow<List<String>> = flow {
+        val filteredMedia = _dummyItems.value.filter { it.contains(query, ignoreCase = true) }
+        Timber.d("Dummy Search: Query '$query' returned ${filteredMedia.size} results")
+        emit(filteredMedia)
     }
+}
+
+@Module
+@InstallIn(ViewModelComponent::class)
+object MediaRepositoryModule {
+    @Provides
+    @ViewModelScoped
+    fun provideMediaRepository(): MediaRepository = MediaRepository()
 }
